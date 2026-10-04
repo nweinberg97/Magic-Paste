@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Magic Paste · Playground</title>
+    <meta name="description" content="Paste exactly what you need, formatted for where you're going." />
+    <link rel="icon" href="icons/icon.svg" />
+    <link rel="stylesheet" href="playground.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="bar-inner">
+        <a class="brand" href="#top"><img src="icons/icon.svg" alt="" width="22" height="22" />Magic Paste</a>
+        <span class="crumb">Playground</span>
+        <nav class="nav">
+          <a href="#live">Try it live</a>
+          <a href="#how">How it works</a>
+          <a href="https://github.com/nweinberg97/magic-paste">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <div class="welcome" id="welcome" hidden>
+        <strong>Magic Paste is installed.</strong> It's active on pages you open from now on. Refresh tabs that were already open.
+      </div>
+
+      <section class="intro">
+        <h1>Paste exactly what you need, formatted for where you're going.</h1>
+        <p>
+          Magic Paste reads what you copied, works out where it's going, and pastes it the way that app expects. No cleanup
+          afterwards. Pick a case, or paste your own content into the clipboard panel.
+        </p>
+      </section>
+
+      <section class="cases" aria-label="Example cases">
+        <div class="case-list" id="cases"></div>
+      </section>
+
+      <section class="input">
+        <div class="panel-head">
+          <h2>Clipboard</h2>
+          <span class="chip" id="source-chip"></span>
+          <span class="spacer"></span>
+          <button class="link" id="clear">Clear</button>
+        </div>
+        <div class="input-box">
+          <textarea
+            id="input"
+            spellcheck="false"
+            data-magic-paste="off"
+            placeholder="Paste anything here. Rich text keeps its HTML, exactly as the extension would see it."
+          ></textarea>
+          <div class="html-bar" id="html-bar" hidden>
+            <span class="html-dot"></span>
+            <span id="html-size">Rich HTML on clipboard</span>
+            <span class="spacer"></span>
+            <button class="link" id="toggle-source">View HTML</button>
+            <button class="link" id="drop-html">Use text only</button>
+          </div>
+          <pre class="html-source" id="html-source" hidden></pre>
+        </div>
+        <p class="problem" id="problem"></p>
+      </section>
+
+      <section class="compare">
+        <div class="compare-head">
+          <div class="picker" id="destinations" role="radiogroup" aria-label="Destination"></div>
+          <div class="view-toggle" role="radiogroup" aria-label="View">
+            <button role="radio" aria-checked="true" data-view="preview">Preview</button>
+            <button role="radio" aria-checked="false" data-view="source">Output</button>
+          </div>
+        </div>
+
+        <div class="compare-grid">
+          <figure class="pane">
+            <figcaption><span class="tag">Before</span>As copied</figcaption>
+            <div class="frame" id="before"></div>
+          </figure>
+          <figure class="pane">
+            <figcaption>
+              <span class="tag tag-accent">After</span>With Magic Paste
+              <span class="spacer"></span>
+              <button class="btn" id="copy">Copy result</button>
+            </figcaption>
+            <div class="frame" id="after"></div>
+          </figure>
+        </div>
+
+        <div class="changes">
+          <ul class="notes" id="notes"></ul>
+          <p class="trace" id="trace"></p>
+        </div>
+      </section>
+
+      <section class="live" id="live">
+        <div class="section-head">
+          <h2>Try the real interceptor</h2>
+          <p>
+            This editor runs the same paste handler the extension injects into pages. Copy something from another tab, click
+            inside, and press <span class="kbd" data-mod-key>⌘V</span>. It formats for the destination selected above.
+          </p>
+        </div>
+        <div class="live-box">
+          <div class="live-toolbar">
+            <span class="live-dest" id="live-dest"></span>
+            <span class="spacer"></span>
+            <label class="live-toggle"><input class="switch" type="checkbox" id="live-enabled" checked /> Magic Paste</label>
+            <button class="link" id="live-clear">Clear</button>
+          </div>
+          <div class="live-editor" id="live-editor" contenteditable="true" data-placeholder="Paste here"></div>
+          <textarea class="live-editor live-plain" id="live-plain" placeholder="Paste here" hidden></textarea>
+          <p class="live-note" id="live-note"></p>
+        </div>
+      </section>
+
+      <section class="how" id="how">
+        <div class="section-head">
+          <h2>How it works</h2>
+          <p>A paste is intercepted, rebuilt from meaning rather than markup, and re-rendered for the destination.</p>
+        </div>
+        <ol class="pipeline">
+          <li><b>Copy</b><span>The clipboard holds text/plain and often text/html.</span></li>
+          <li><b>Detect content</b><span>HTML, Markdown, PDF-wrapped text, spreadsheet rows or plain prose.</span></li>
+          <li><b>Normalize</b><span>Parse into a small document model: paragraphs, headings, lists, links, emphasis.</span></li>
+          <li><b>Detect destination</b><span>Gmail, Slack, Notion, Google Docs, rich editor or plain field.</span></li>
+          <li><b>Format</b><span>Each destination adapter renders what that app supports, and nothing it doesn't.</span></li>
+          <li><b>Sanitize</b><span>Allowlisted tags, escaped text, vetted URLs. Source styles never pass through.</span></li>
+          <li><b>Paste</b><span>Handed to the editor's own paste handler, or inserted directly. Any failure falls back to a normal paste.</span></li>
+        </ol>
+        <div class="limits">
+          <h3>Honest limits</h3>
+          <ul>
+            <li><b>Google Docs</b> draws its editor on a canvas and owns paste end to end, so the extension can't rewrite a paste in flight. Use <em>Clean clipboard</em> in the popup, then paste normally.</li>
+            <li><b>Images and files</b> pass through untouched. Turning screenshots of text into text would need OCR.</li>
+            <li><b>Chrome pages</b> (chrome://, the Web Store, the built-in PDF viewer) don't allow extensions to run.</li>
+            <li><b>Custom editors</b> are reached through their standard paste handling; an editor that ignores it gets a normal paste.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span>Magic Paste · runs locally, sends nothing anywhere.</span>
+      <span>Never makes paste worse: if in doubt, it steps aside.</span>
+    </footer>
+
+    <script src="playground.js"></script>
+  </body>
+</html>

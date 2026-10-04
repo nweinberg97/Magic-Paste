@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Magic Paste</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="top">
+      <img class="mark" src="icons/icon.svg" alt="" width="28" height="28" />
+      <div>
+        <h1>Magic Paste</h1>
+        <p class="tagline">Paste exactly what you need, formatted for where you're going.</p>
+      </div>
+    </header>
+
+    <section class="power">
+      <label class="power-label" for="enabled">
+        <span>Magic Paste</span>
+        <span class="state" id="state">On</span>
+      </label>
+      <input class="switch" type="checkbox" id="enabled" checked />
+    </section>
+    <p class="behaviour" id="behaviour">
+      Cleans and adapts copied content when you paste with <span class="kbd" data-mod-key>⌘V</span>.
+    </p>
+
+    <section class="site" id="site" hidden>
+      <span class="site-dot" id="site-dot"></span>
+      <span class="site-text" id="site-text"></span>
+      <button class="link" id="site-action" hidden></button>
+    </section>
+
+    <section class="block">
+      <h2>Clean clipboard</h2>
+      <div class="clip-row">
+        <select id="clip-destination" aria-label="Format clipboard for"></select>
+        <button class="btn btn-primary" id="clip-clean">Clean</button>
+      </div>
+      <p class="hint" id="clip-status">For apps that run their own paste, like Google Docs. Clean, then paste as usual.</p>
+    </section>
+
+    <section class="block">
+      <h2>Recent</h2>
+      <ol class="activity" id="activity"></ol>
+    </section>
+
+    <details class="settings">
+      <summary>Settings</summary>
+      <label class="setting"><span>Preserve links</span><input class="switch" type="checkbox" data-setting="preserveLinks" /></label>
+      <label class="setting"><span>Preserve bold &amp; italic</span><input class="switch" type="checkbox" data-setting="preserveEmphasis" /></label>
+      <label class="setting">
+        <span>Destination-aware formatting<small>Adapt to Gmail, Slack, Notion and Docs. Off: generic clean HTML everywhere.</small></span>
+        <input class="switch" type="checkbox" data-setting="destinationAware" />
+      </label>
+      <label class="setting"><span>Show paste confirmation</span><input class="switch" type="checkbox" data-setting="showConfirmation" /></label>
+    </details>
+
+    <footer class="foot">
+      <button class="link" id="open-playground">Open playground</button>
+      <span id="version"></span>
+    </footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

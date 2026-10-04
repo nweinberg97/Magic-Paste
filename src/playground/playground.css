@@ -1,0 +1,739 @@
+@import "../ui/tokens.css";
+
+html {
+  scroll-behavior: smooth;
+}
+
+h1,
+h2,
+h3,
+p,
+figure {
+  margin: 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.link:hover {
+  color: var(--ink);
+  text-decoration-color: currentColor;
+}
+
+/* ---------- Top bar ---------- */
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+}
+.bar-inner,
+main,
+.foot {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+.brand img {
+  border-radius: 6px;
+}
+.crumb {
+  padding-left: 12px;
+  border-left: 1px solid var(--line-2);
+  color: var(--ink-3);
+}
+.nav {
+  display: flex;
+  gap: 22px;
+  margin-left: auto;
+  font-size: 13px;
+}
+.nav a {
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.nav a:hover {
+  color: var(--ink);
+}
+
+/* ---------- Intro ---------- */
+
+.welcome {
+  margin-top: 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.welcome strong {
+  color: var(--ink);
+}
+
+.intro {
+  padding: 56px 0 28px;
+}
+.intro h1 {
+  max-width: 17em;
+  font-size: clamp(26px, 3.6vw, 36px);
+  font-weight: 650;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+.intro p {
+  max-width: 40em;
+  margin-top: 14px;
+  color: var(--ink-2);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* ---------- Cases ---------- */
+
+.case-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.case {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.case:hover {
+  border-color: var(--ink-3);
+}
+.case-from {
+  color: var(--ink-2);
+}
+.case-arrow {
+  color: var(--ink-3);
+}
+.case-to {
+  font-weight: 550;
+}
+.case.active {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+/* ---------- Clipboard input ---------- */
+
+.input {
+  margin-top: 32px;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+h2 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.chip {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.input-box {
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+.input-box:focus-within {
+  border-color: var(--ink-3);
+}
+#input {
+  display: block;
+  width: 100%;
+  min-height: 150px;
+  max-height: 320px;
+  padding: 14px 16px;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  background: transparent;
+  font: 13px/1.6 var(--mono);
+}
+.html-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+.html-bar[hidden],
+.chip[hidden] {
+  display: none;
+}
+.html-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.html-source {
+  max-height: 220px;
+  margin: 0;
+  padding: 12px 16px;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font: 12px/1.55 var(--mono);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.problem {
+  min-height: 1.5em;
+  margin-top: 10px;
+  color: var(--ink-2);
+}
+
+/* ---------- Compare ---------- */
+
+.compare {
+  margin-top: 28px;
+}
+.compare-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.picker,
+.view-toggle {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.picker button,
+.view-toggle button {
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.picker button:hover,
+.view-toggle button:hover {
+  color: var(--ink);
+}
+.picker [aria-checked="true"],
+.view-toggle [aria-checked="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.pane figcaption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  margin-bottom: 8px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.tag {
+  padding: 1px 7px;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tag-accent {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.changes {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 6px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.notes li {
+  position: relative;
+  padding-left: 22px;
+  color: var(--ink);
+}
+.notes li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.45em;
+  width: 9px;
+  height: 5px;
+  border-left: 1.75px solid var(--ok);
+  border-bottom: 1.75px solid var(--ok);
+  transform: rotate(-45deg);
+}
+.notes li.note-quiet::before {
+  border-color: var(--ink-3);
+}
+.trace {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Destination frames (always light: they stand in for real apps) ---------- */
+
+.frame {
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: #fff;
+  color: #222;
+  overflow: hidden;
+  color-scheme: light;
+}
+.frame-body {
+  min-height: 300px;
+  padding: 18px 22px;
+}
+.empty {
+  color: #8c877e;
+  font: 14px/1.5 var(--font);
+}
+.raw {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.source-frame {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  border: 0;
+}
+
+.frame-gmail {
+  font: 14px/1.5 Arial, Helvetica, sans-serif;
+}
+.mail-head {
+  border-bottom: 1px solid #eceff1;
+}
+.mail-field {
+  display: flex;
+  gap: 12px;
+  padding: 9px 22px;
+  border-bottom: 1px solid #f1f3f4;
+  color: #202124;
+  font-size: 13.5px;
+}
+.mail-field span:first-child {
+  width: 52px;
+  color: #80868b;
+}
+
+.frame-google-docs {
+  background: #f0f2f4;
+  font: 11pt/1.5 Arial, sans-serif;
+}
+.frame-google-docs .frame-body {
+  margin: 18px;
+  padding: 36px 40px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15);
+}
+
+.frame-slack {
+  font: 15px/1.47 Lato, "Helvetica Neue", system-ui, sans-serif;
+  color: #1d1c1d;
+}
+.slack-bar {
+  margin: 0 12px 12px;
+  padding: 9px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #868686;
+  font-size: 14px;
+}
+
+.frame-notion {
+  font: 16px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Helvetica, sans-serif;
+  color: #37352f;
+}
+.frame-rich {
+  font: 15px/1.55 var(--font);
+}
+.frame-plain {
+  background: #fbfbfa;
+}
+.frame-plain .raw,
+.plain-out {
+  font: 13px/1.6 var(--mono);
+}
+
+/* Rendered output inside frames */
+.doc > :first-child {
+  margin-top: 0;
+}
+.doc p {
+  margin: 0 0 0.8em;
+}
+.doc h1,
+.doc h2,
+.doc h3 {
+  margin: 0.9em 0 0.4em;
+  line-height: 1.25;
+}
+.frame-google-docs .doc h1 {
+  font-size: 20pt;
+  font-weight: 400;
+}
+.frame-google-docs .doc h2 {
+  font-size: 16pt;
+  font-weight: 400;
+}
+.frame-google-docs .doc h3 {
+  font-size: 14pt;
+  font-weight: 400;
+  color: #434343;
+}
+.frame-notion .doc h1 {
+  font-size: 1.875em;
+  font-weight: 700;
+}
+.doc ul,
+.doc ol {
+  margin: 0 0 0.8em;
+  padding-left: 1.6em;
+}
+.doc li > ul,
+.doc li > ol {
+  margin: 0.2em 0;
+}
+.frame-gmail .doc ul,
+.frame-gmail .doc ol {
+  margin: 0;
+}
+.doc blockquote {
+  margin: 0 0 0.8em;
+  padding-left: 14px;
+  border-left: 3px solid #ddd;
+  color: #555;
+}
+.doc pre {
+  margin: 0 0 0.8em;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #f6f6f4;
+  font: 12.5px/1.55 var(--mono);
+  white-space: pre-wrap;
+}
+.doc code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #f2f1ee;
+  font: 0.88em var(--mono);
+}
+.doc pre code {
+  padding: 0;
+  background: none;
+  font: inherit;
+}
+.frame-slack .doc code {
+  color: #c01343;
+  border: 1px solid #e3e3e3;
+}
+.doc a {
+  color: #1155cc;
+}
+.doc table {
+  margin: 0 0 0.8em;
+  border-collapse: collapse;
+}
+.doc th,
+.doc td {
+  padding: 5px 10px;
+  border: 1px solid #d9d9d9;
+  text-align: left;
+  vertical-align: top;
+}
+.doc img {
+  max-width: 100%;
+}
+.doc hr {
+  border: 0;
+  border-top: 1px solid #ddd;
+}
+
+.source-view {
+  font-size: 12px;
+}
+.source-label {
+  margin: 0 0 6px;
+  color: #8c877e;
+  font: 600 11px/1 var(--font);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.code {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: #f6f6f4;
+  color: #333;
+  font: 12px/1.6 var(--mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------- Live ---------- */
+
+.live,
+.how {
+  margin-top: 80px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.section-head {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.section-head h2 {
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+.section-head p {
+  max-width: 44em;
+  color: var(--ink-2);
+}
+.live-box {
+  margin-left: 264px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+.live-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.live-dest {
+  color: var(--ink-2);
+}
+.live-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.live-editor {
+  display: block;
+  width: 100%;
+  min-height: 180px;
+  padding: 18px 22px;
+  border: 0;
+  outline: none;
+  background: #fff;
+  color: #222;
+  color-scheme: light;
+  resize: vertical;
+}
+.live-editor[hidden] {
+  display: none;
+}
+.live-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #aaa;
+}
+.live-plain {
+  font: 13px/1.6 var(--mono);
+}
+.live-note {
+  min-height: 38px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+/* ---------- How it works ---------- */
+
+.pipeline {
+  margin: 0 0 0 264px;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.pipeline li {
+  display: grid;
+  grid-template-columns: 28px 170px 1fr;
+  gap: 8px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+  counter-increment: step;
+}
+.pipeline li::before {
+  content: counter(step, decimal-leading-zero);
+  color: var(--ink-3);
+  font: 12px/1.6 var(--mono);
+}
+.pipeline b {
+  font-weight: 600;
+}
+.pipeline span {
+  color: var(--ink-2);
+}
+.limits {
+  margin: 32px 0 0 264px;
+}
+.limits h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.limits ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink-2);
+}
+.limits li {
+  margin-bottom: 6px;
+}
+.limits b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 72px;
+  padding-top: 18px;
+  padding-bottom: 32px;
+  /* A rule aligned with the content column rather than the padding box. */
+  background: linear-gradient(var(--line), var(--line)) no-repeat 24px 0 / calc(100% - 48px) 1px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+/* ---------- Narrow screens ---------- */
+
+@media (max-width: 860px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
+  .section-head {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .live-box,
+  .pipeline,
+  .limits {
+    margin-left: 0;
+  }
+  .crumb,
+  .nav a:not(:last-child) {
+    display: none;
+  }
+}
+@media (max-width: 560px) {
+  .bar-inner,
+  main,
+  .foot {
+    padding: 0 16px;
+  }
+  .picker {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .pipeline li {
+    grid-template-columns: 28px 1fr;
+  }
+  .pipeline li span {
+    grid-column: 2;
+  }
+  .foot {
+    flex-direction: column;
+  }
+}

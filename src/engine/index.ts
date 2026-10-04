@@ -1,0 +1,13 @@
+export { transform, MAX_INPUT_CHARS, type TransformOptions, type TransformResult } from './pipeline';
+export { detectSource, type PastePayload, type SourceInfo } from './detect-source';
+export { ADAPTERS } from './destinations/adapters';
+export { detectDestination, destinationForHost, isDestinationId } from './destinations/detect';
+export {
+  DEFAULT_FORMAT,
+  type DestinationAdapter,
+  type DestinationId,
+  type FormatSettings,
+  type PasteTarget,
+} from './destinations/types';
+export type { Note, NoteId } from './report';
+export type { Doc, Block, Inline } from './model';

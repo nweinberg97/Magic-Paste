@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Magic Paste test editors</title>
+  </head>
+  <body>
+    <textarea id="textarea"></textarea>
+    <input id="input" type="text" />
+    <input id="password" type="password" />
+
+    <!-- A plain contenteditable: Magic Paste inserts the cleaned HTML itself. -->
+    <div id="rich" contenteditable="true" style="min-height: 40px"></div>
+
+    <!-- Stand-in for framework editors (ProseMirror, Lexical, Slate): they handle paste themselves. -->
+    <div id="framework" contenteditable="true" style="min-height: 40px"></div>
+
+    <!-- Code editors must never be touched. -->
+    <div class="cm-editor"><div id="code" contenteditable="true" style="min-height: 40px"></div></div>
+
+    <script>
+      const framework = document.getElementById('framework');
+      framework.addEventListener('paste', (event) => {
+        event.preventDefault();
+        framework.dataset.receivedHtml = event.clipboardData.getData('text/html');
+        framework.dataset.receivedText = event.clipboardData.getData('text/plain');
+        framework.dataset.pasteCount = String(Number(framework.dataset.pasteCount || 0) + 1);
+      });
+    </script>
+  </body>
+</html>
