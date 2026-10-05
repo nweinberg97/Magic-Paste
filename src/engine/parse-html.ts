@@ -1,7 +1,8 @@
 import { buildLists, type FlatItem } from './lists';
-import type { Block, Doc, HeadingLevel, Inline, Marks } from './model';
+import type { Block, Doc, HeadingLevel, Inline, Marks, SourceFont } from './model';
 import type { Report } from './report';
 import { safeImageSrc, safeUrl } from './sanitize';
+import { cleanColor, cleanFontFamily, cleanFontSize } from './style/css';
 import { cleanCharacters } from './text';
 
 /**
@@ -73,7 +74,7 @@ function wordListLevel(el: Element): number | null {
   return match ? Number(match[1]) - 1 : null;
 }
 
-function marksFor(el: Element, marks: Marks): Marks {
+function marksFor(el: Element, marks: Marks, report?: Report): Marks {
   const next: Marks = { ...marks };
   const tag = el.localName;
   const css = style(el);
@@ -96,7 +97,49 @@ function marksFor(el: Element, marks: Marks): Marks {
     const href = safeUrl(el.getAttribute('href'));
     if (href) next.href = href;
   }
+
+  const font = sourceFont(el, css, report);
+  if (font) next.font = { ...marks.font, ...font };
   return next;
+}
+
+/**
+ * The run's own look, kept for blank destinations, minus the malfunctions:
+ * light text from dark pages that would vanish on white, drop caps and
+ * other oversized letters. Backgrounds and layout are never carried.
+ */
+function sourceFont(el: Element, css: string, report?: Report): SourceFont | undefined {
+  const declared = (name: string) => new RegExp(`(?:^|;)\\s*${name}\\s*:\\s*([^;]+)`).exec(css)?.[1];
+  const font: SourceFont = {};
+
+  // Family names keep their original capitalisation (the lowercased css is fine for everything else).
+  const rawFamily = /(?:^|;)\s*font-family\s*:\s*([^;]+)/i.exec(el.getAttribute('style') ?? '')?.[1];
+  const family = cleanFontFamily(rawFamily ?? el.getAttribute('face') ?? undefined);
+  if (family) font.family = family;
+
+  const size = cleanFontSize(declared('font-size'));
+  if (size) {
+    const points = parseFloat(size) * (size.endsWith('px') ? 0.75 : 1);
+    if (/float\s*:\s*(left|right)/.test(css) || points > 40) report?.add('oversized');
+    else font.size = size;
+  }
+
+  const color = cleanColor(declared('color') ?? el.getAttribute('color') ?? undefined);
+  if (color) {
+    // Below 2.5:1 on white, text designed for a dark page is unreadable once pasted.
+    if (contrastOnWhite(color) < 2.5) report?.add('invisible-text');
+    else font.color = color;
+  }
+  return Object.keys(font).length ? font : undefined;
+}
+
+function contrastOnWhite(hex: string): number {
+  const channel = (i: number) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+  return 1.05 / (luminance + 0.05);
 }
 
 class HtmlWalker {
@@ -122,7 +165,10 @@ class HtmlWalker {
       wordList = [];
     };
 
+    // Flex and grid children sit apart on screen even with no whitespace between them in the HTML.
+    const spaced = /display\s*:\s*(inline-)?(flex|grid)/.test(style(parent));
     for (const node of Array.from(parent.childNodes)) {
+      if (spaced && node.nodeType === Node.ELEMENT_NODE && inline.length) inline.push({ type: 'text', text: ' ', marks: {} });
       if (node.nodeType === Node.TEXT_NODE) {
         if (node.textContent?.trim()) flushWordList();
         inline.push(...this.textNode(node, marks));
@@ -144,10 +190,12 @@ class HtmlWalker {
       if (wordLevel !== null) {
         flushInline();
         const marker = el.querySelector('[style*="mso-list:Ignore" i], [style*="mso-list: Ignore" i]')?.textContent ?? '';
+        const content = this.inline(el, marks);
+        const typed = stripListMarker(content);
         wordList.push({
           level: wordLevel,
-          ordered: /^\(?[0-9a-z]{1,4}[.)]/i.test(marker.trim()),
-          content: this.inline(el, marks),
+          ordered: /^\(?[0-9a-z]{1,4}[.)]/i.test((marker || typed).trim()),
+          content,
         });
         continue;
       }
@@ -165,8 +213,12 @@ class HtmlWalker {
     return out;
   }
 
-  private block(el: Element, marks: Marks): Block[] {
+  private block(el: Element, inherited: Marks): Block[] {
     const tag = el.localName;
+    // Code keeps its own text only: editor themes (dark backgrounds, token colours) aren't carried.
+    if (tag === 'pre' || this.isCodeBlock(el)) return [{ type: 'code', text: codeText(el) }];
+    // A block's own inline style (its font, size, colour) applies to everything inside it.
+    const marks = marksFor(el, inherited, this.report);
 
     if (/^h[1-6]$/.test(tag)) {
       const level = Math.min(Number(tag[1]), 3) as HeadingLevel;
@@ -182,11 +234,10 @@ class HtmlWalker {
       return buildLists(items);
     }
     if (tag === 'blockquote') return [{ type: 'quote', children: this.blocks(el, marks) }];
-    if (tag === 'pre' || this.isCodeBlock(el)) return [{ type: 'code', text: codeText(el) }];
     if (tag === 'hr') return [{ type: 'rule' }];
     if (tag === 'img') return this.image(el);
     if (tag === 'table') return this.table(el, marks);
-    return this.blocks(el, marksFor(el, marks));
+    return this.blocks(el, marks);
   }
 
   /** Editors like VS Code copy code as styled divs rather than <pre>. */
@@ -207,7 +258,7 @@ class HtmlWalker {
       // Google Docs flattens nesting into aria-level on each <li>.
       const ariaLevel = Number(child.getAttribute('aria-level'));
       const itemLevel = ariaLevel > 0 ? ariaLevel - 1 : level;
-      out.push({ level: itemLevel, ordered, start: start++, content: this.inline(child, marks, false, true) });
+      out.push({ level: itemLevel, ordered, start: start++, content: this.inline(child, marksFor(child, marks, this.report), false, true) });
       for (const nested of Array.from(child.querySelectorAll(':scope > ul, :scope > ol, :scope > div > ul, :scope > div > ol'))) {
         this.listItems(nested, itemLevel + 1, marks, out);
       }
@@ -217,17 +268,36 @@ class HtmlWalker {
   private table(el: Element, marks: Marks): Block[] {
     const table = el as HTMLTableElement;
     const rows = Array.from(table.rows).filter((row) => row.closest('table') === table);
-    const width = Math.max(0, ...rows.map((row) => row.cells.length));
-    // Layout tables (one column, or tables of tables) are containers, not data.
-    if (width < 2 || table.querySelector('table')) {
-      return rows.flatMap((row) => Array.from(row.cells).flatMap((cell) => this.blocks(cell, marks)));
+    const width = Math.max(0, ...rows.map((row) => Array.from(row.cells).reduce((n, cell) => n + Math.max(1, cell.colSpan), 0)));
+    // Layout tables (one row or column, or tables of tables, like email signatures) are containers, not data.
+    if (width < 2 || rows.length < 2 || table.querySelector('table')) {
+      return rows.flatMap((row) => Array.from(row.cells).flatMap((cell) => this.blocks(cell, marksFor(cell, marks, this.report))));
     }
-    const cells = rows
-      .map((row) => Array.from(row.cells).map((cell) => this.inline(cell, marks)))
+
+    // Expand merged cells into a regular grid so columns stay aligned.
+    const grid: Inline[][][] = rows.map(() => []);
+    rows.forEach((row, r) => {
+      let c = 0;
+      for (const cell of Array.from(row.cells)) {
+        while (grid[r][c]) c++;
+        grid[r][c] = this.inline(cell, marksFor(cell, marks, this.report));
+        for (let dr = 0; dr < Math.max(1, cell.rowSpan); dr++) {
+          for (let dc = 0; dc < Math.max(1, cell.colSpan); dc++) {
+            if ((dr || dc) && grid[r + dr]) grid[r + dr][c + dc] = [];
+          }
+        }
+        c += Math.max(1, cell.colSpan);
+      }
+    });
+    const cells = grid
+      .map((row) => Array.from({ length: width }, (_, c) => row[c] ?? []))
       .filter((row) => row.some((cell) => cell.some((node) => node.type === 'text' && node.text.trim())));
     if (!cells.length) return [];
+
     const first = rows[0];
-    const header = !!first && (first.parentElement?.localName === 'thead' || Array.from(first.cells).every((c) => c.localName === 'th'));
+    const firstCells = Array.from(first.cells);
+    const boldRow = cells[0].every((cell) => cell.every((node) => node.type !== 'text' || !node.text.trim() || node.marks.bold));
+    const header = first.parentElement?.localName === 'thead' || firstCells.every((c) => c.localName === 'th') || boldRow;
     return [{ type: 'table', header, rows: cells }];
   }
 
@@ -243,7 +313,7 @@ class HtmlWalker {
    * which is the right shape for list items, table cells and headings.
    */
   inline(el: Element, marks: Marks, applyOwnMarks = false, skipNestedLists = false): Inline[] {
-    const own = applyOwnMarks ? marksFor(el, marks) : marks;
+    const own = applyOwnMarks ? marksFor(el, marks, this.report) : marks;
     const out: Inline[] = [];
     for (const node of Array.from(el.childNodes)) {
       if (node.nodeType === Node.TEXT_NODE) {
@@ -265,7 +335,7 @@ class HtmlWalker {
       if (tag === 'img') continue;
       const isBlock = BLOCKS.has(tag);
       if (isBlock && out.some((n) => n.type === 'text' && n.text.trim())) out.push({ type: 'break' });
-      out.push(...this.inline(child, isBlock ? marksFor(child, own) : own, !isBlock));
+      out.push(...this.inline(child, isBlock ? marksFor(child, own, this.report) : own, !isBlock));
     }
     return out;
   }
@@ -311,4 +381,24 @@ function codeText(el: Element): string {
   walk(el);
   if (current) lines.push(current);
   return lines.join('\n').replace(/\u00A0/g, ' ').replace(/\n+$/, '');
+}
+
+/**
+ * Word lists copied without their mso-list:Ignore markers carry the bullet
+ * as text ("·", "o", "§", "1."). Remove it from the item's first run.
+ */
+const LIST_MARKER = /^\s*(?:[·•▪◦§o\-–]|\(?[0-9a-z]{1,3}[.)])(?:\s|\u00a0)+/i;
+
+function stripListMarker(content: Inline[]): string {
+  let removed = '';
+  while (content.length && content[0].type === 'text') {
+    const first = content[0];
+    const match = LIST_MARKER.exec(first.text) ?? (/^\s*[·•▪◦§o]\s*$/.test(first.text) ? [first.text] : null);
+    if (!match) break;
+    removed += match[0];
+    first.text = first.text.slice(match[0].length);
+    if (first.text) break;
+    content.shift();
+  }
+  return removed;
 }

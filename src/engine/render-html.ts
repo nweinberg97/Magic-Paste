@@ -15,6 +15,8 @@ export interface HtmlProfile {
 export interface InlineOptions {
   links: boolean;
   emphasis: boolean;
+  /** Keep each run's source font, size and colour (blank destinations). */
+  preserve?: boolean;
 }
 
 /**
@@ -98,6 +100,11 @@ export function renderInlines(content: Inline[], options: InlineOptions): string
 
 function renderRun(node: Extract<Inline, { type: 'text' }>, options: InlineOptions): string {
   let out = escapeHtml(node.text);
+  const font = options.preserve ? node.marks.font : undefined;
+  if (font) {
+    const css = [font.family && `font-family:${font.family}`, font.size && `font-size:${font.size}`, font.color && `color:${font.color}`];
+    out = `<span style="${escapeHtml(css.filter(Boolean).join(';'))}">${out}</span>`;
+  }
   if (node.marks.code) out = `<code>${out}</code>`;
   if (!options.emphasis) return out;
   if (node.marks.strike) out = `<s>${out}</s>`;

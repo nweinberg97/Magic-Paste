@@ -8,6 +8,8 @@ export interface Sample {
   /** What goes wrong with a normal paste. */
   problem: string;
   payload: PastePayload;
+  /** HTML copied out of the destination document, to learn its style from. */
+  template?: string;
 }
 
 // Built from char codes so the invisible characters are visible in review.
@@ -80,6 +82,40 @@ Hana Sato\tData Analyst\t2026-11-17\tRemote`;
 
 const blogHtml = `<meta charset="utf-8"><article style="font-family: charter, Georgia, serif; color: rgb(36, 36, 36);"><h1 style="font-size: 42px; line-height: 52px; font-weight: 700; letter-spacing: -0.016em;">The quiet cost of meetings</h1><div style="display: flex; gap: 12px;"><span style="font-size: 14px; color: rgb(107, 107, 107);">Elena Park</span><button style="border-radius: 99px; background: rgb(26, 137, 23); color: white;">Follow</button><span style="font-size: 14px; color: rgb(107, 107, 107);">· 6 min read</span></div><p style="font-size: 20px; line-height: 32px; letter-spacing: -0.003em;"><span style="float: left; font-size: 66px; line-height: 0.83;">E</span>very recurring meeting looks cheap on its own. Thirty minutes, six people, once a week.${NBSP}${NBSP}But the real cost is the <em>fragmented afternoon</em> it leaves behind.</p><blockquote style="border-left: 3px solid rgb(36,36,36); padding-left: 20px; font-style: italic; font-size: 20px;">Makers need uninterrupted blocks of at least half a day.</blockquote><p style="font-size: 20px; line-height: 32px;">Three changes that worked for us:</p><ol style="font-size: 20px; line-height: 32px;"><li><strong>Default to 25 minutes</strong>, not 30.</li><li>Cancel any meeting without a written agenda.</li><li>Protect two no-meeting afternoons per week.</li></ol><p style="font-size: 20px; line-height: 32px;">More in <a href="https://example.com/maker-schedule" style="color: inherit; text-decoration: underline;">Maker's Schedule, Manager's Schedule</a>.<span class="sr-only">Opens in a new window</span></p><div style="display:flex"><button>👏 1.2K</button><button>Share</button></div></article>`;
 
+// What Google Docs puts on the clipboard when you copy part of a styled resume.
+const docsSpan = (css: string, text: string) =>
+  `<span style="font-size:11.5pt;font-family:'Times New Roman',serif;color:#000000;background-color:transparent;font-variant:normal;text-decoration:none;vertical-align:baseline;white-space:pre-wrap;${css}">${text}</span>`;
+const docsHeading = (text: string) =>
+  `<hr><p dir="ltr" style="line-height:1.2;margin-top:4pt;margin-bottom:2pt;"><span style="font-size:13pt;font-family:'Times New Roman',serif;color:#2f4b8c;font-weight:700;font-style:normal;white-space:pre-wrap;">${text}</span></p>`;
+const docsLine = (inner: string) => `<p dir="ltr" style="line-height:1.2;margin-top:2pt;margin-bottom:0pt;">${inner}</p>`;
+const docsBullets = (items: string[]) =>
+  `<ul style="margin-top:0;margin-bottom:0;padding-inline-start:48px;">${items
+    .map(
+      (item) =>
+        `<li dir="ltr" style="list-style-type:disc;font-size:11.5pt;font-family:'Times New Roman',serif;color:#000000;" aria-level="1"><p dir="ltr" style="line-height:1.2;margin-top:0pt;margin-bottom:0pt;" role="presentation">${docsSpan('font-weight:400;font-style:normal;', item)}</p></li>`,
+    )
+    .join('')}</ul>`;
+
+const resumeTemplate =
+  `<meta charset="utf-8"><b style="font-weight:normal;" id="docs-internal-guid-5b2e9c1a-7fff-4d0e-a1b2-c3d4e5f6a7b8">` +
+  docsHeading('PROFILE') +
+  docsLine(docsSpan('font-weight:400;font-style:normal;', 'Operations generalist with experience across retail logistics, customer support and small-team project delivery.')) +
+  docsHeading('PROFESSIONAL EXPERIENCE') +
+  docsLine(
+    docsSpan('font-weight:700;font-style:normal;', 'Harbor & Pine,') +
+      docsSpan('font-weight:400;font-style:italic;', ' Operations Coordinator') +
+      docsSpan('font-weight:400;font-style:normal;', '\t') +
+      docsSpan('font-weight:400;font-style:italic;', 'Mar 2021 - Jun 2023'),
+  ) +
+  docsBullets([
+    'Coordinated weekly inventory counts across three warehouse locations',
+    'Trained six new support staff on the ticketing and returns process',
+  ]) +
+  `</b>`;
+
+// The tailored resume as it comes off a plain web document: semantic HTML, none of the template's look.
+const tailoredResume = `<meta charset="utf-8"><h2>Profile</h2><p>Project coordinator with a background in logistics and customer operations. I have run scheduling, vendor coordination and weekly reporting for a regional retailer, and organized volunteer events for a community food bank.</p><h2>Professional Experience</h2><p><strong>Harbor &amp; Pine,</strong> <em>Operations Coordinator</em> · Mar 2021 – Jun 2023</p><ul><li>Ran scheduling and vendor coordination for three warehouse locations, cutting late deliveries by a third</li><li>Hired and trained six support staff, and wrote the onboarding guide the team still uses</li><li>Built a weekly operations report from spreadsheet exports, replacing four manual status emails</li></ul><p><strong>Brightline Studio,</strong> <em>Project Assistant</em> · Aug 2023 – Present</p><ul><li>Coordinate timelines, budgets and client check-ins for a five-person design team</li></ul><h2>Community Leadership</h2><p><strong>Eastside Food Bank,</strong> <em>Volunteer Lead</em> · Sep 2018 – Feb 2021</p><ul><li>Organized a 20-person volunteer roster and two seasonal food drives</li></ul>`;
+
 export const SAMPLES: Sample[] = [
   {
     id: 'chatgpt-gmail',
@@ -144,5 +180,14 @@ export const SAMPLES: Sample[] = [
     destination: 'gmail',
     problem: 'Articles bring 42px headings, drop caps, Follow buttons and hidden screen-reader text.',
     payload: { html: blogHtml },
+  },
+  {
+    id: 'resume-template',
+    from: 'New resume content',
+    to: 'Your template',
+    destination: 'google-docs',
+    problem: 'Pasted content never looks like the document it lands in. Here, Magic Paste has learned the template’s style from a copied sample.',
+    payload: { html: tailoredResume },
+    template: resumeTemplate,
   },
 ];

@@ -5,7 +5,10 @@ import { forEachInline, type Doc } from './model';
 import { normalizeDoc } from './normalize';
 import { parseHtml } from './parse-html';
 import { parseText } from './parse-text';
+import { renderText } from './render-text';
 import { Report, type Note } from './report';
+import { renderMatched, type RoleCounts } from './style/render-matched';
+import type { StyleProfile } from './style/types';
 
 /** Above this size we leave paste alone rather than risk a visible stall. */
 export const MAX_INPUT_CHARS = 1_000_000;
@@ -15,6 +18,14 @@ export interface TransformOptions {
   settings?: Partial<FormatSettings>;
   /** The target is a single-line input. */
   singleLine?: boolean;
+  /** The destination document's learned look; applied to rich destinations. */
+  style?: StyleProfile;
+  /**
+   * 'adapt' (default): take on the destination's formatting.
+   * 'preserve': the destination is blank, so keep the source's look, repaired.
+   * A learned `style` always wins: matching a designed document is the point.
+   */
+  mode?: 'adapt' | 'preserve';
 }
 
 export type TransformResult =
@@ -54,7 +65,17 @@ export function transform(payload: PastePayload, options: TransformOptions): Tra
 
     reportFormatting(doc, settings, report);
     const destination = ADAPTERS[options.destination] ?? ADAPTERS.rich;
-    const rendered = destination.render(doc, { settings, source, report });
+    const matching = !!options.style && destination.mode === 'rich';
+    const preserve = !matching && options.mode === 'preserve' && destination.mode === 'rich' && destination.id !== 'slack';
+    if (preserve) {
+      report.omit('styles');
+      if (hasSourceFonts(doc)) report.add('kept-source');
+    } else {
+      // Repairs to the source look only matter when that look is kept.
+      report.omit('invisible-text');
+      report.omit('oversized');
+    }
+    const rendered = matching ? renderInStyle(doc, options.style!, settings, report) : destination.render(doc, { settings, source, report, preserve });
 
     let text = rendered.text;
     if (options.singleLine && /\n/.test(text.trim())) {
@@ -87,4 +108,27 @@ function reportFormatting(doc: Doc, settings: FormatSettings, report: Report): v
   if (settings.preserveLinks) report.add('links', links);
   else report.add('links-removed', links ? 1 : 0);
   if (!settings.preserveEmphasis && emphasis) report.add('emphasis-removed');
+}
+
+function renderInStyle(doc: Doc, style: StyleProfile, settings: FormatSettings, report: Report) {
+  const inline = { links: settings.preserveLinks, emphasis: settings.preserveEmphasis };
+  const { html, counts } = renderMatched(doc, style, inline);
+  report.add('matched-style', 1, describeCounts(counts));
+  return { html, text: renderText(doc, { flavor: 'clean', ...inline }) };
+}
+
+function describeCounts(counts: RoleCounts): string {
+  const label: Record<keyof RoleCounts, string> = { heading: 'heading', entry: 'entry', bullet: 'bullet', body: 'paragraph' };
+  return (Object.keys(counts) as (keyof RoleCounts)[])
+    .filter((role) => counts[role])
+    .map((role) => `${counts[role]} ${counts[role] === 1 ? label[role] : role === 'entry' ? 'entries' : `${label[role]}s`}`)
+    .join(', ');
+}
+
+function hasSourceFonts(doc: Doc): boolean {
+  let found = false;
+  forEachInline(doc.blocks, (node) => {
+    if (node.type === 'text' && node.marks.font) found = true;
+  });
+  return found;
 }

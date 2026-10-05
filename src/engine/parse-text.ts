@@ -15,7 +15,7 @@ import { cleanCharacters, collapseSpaces, looksLikeMarkdown } from './text';
 export function parseText(input: string, report: Report, options: { markdown?: boolean } = {}): Doc {
   const source = cleanCharacters(input, report);
   const markdown = options.markdown ?? looksLikeMarkdown(source);
-  const lines = source.split('\n').map((line) => line.replace(/[ \t]+$/, ''));
+  const lines = dropPageFurniture(source.split('\n').map((line) => line.replace(/[ \t]+$/, '')), report);
   return { blocks: new TextParser(lines, markdown, report).parse() };
 }
 
@@ -388,4 +388,17 @@ function joinWrapped(left: string, right: string, report: Report): string {
     return left.slice(0, -1) + right;
   }
   return `${left} ${right}`;
+}
+
+/**
+ * PDF running headers and footers ("Annual Report 2025      Page 4 of 38",
+ * "Page 12") land in the middle of copied text. Only unmistakable page
+ * markers are removed; a bare number on its own line could be content.
+ */
+const PAGE_MARKER = /^\s*(?:.{0,80}?\s{2,})?page\s+\d{1,4}(?:\s+(?:of|\/)\s+\d{1,4})?\s*$/i;
+
+function dropPageFurniture(lines: string[], report: Report): string[] {
+  const kept = lines.filter((line) => !PAGE_MARKER.test(line));
+  report.add('page-furniture', lines.length - kept.length);
+  return kept;
 }

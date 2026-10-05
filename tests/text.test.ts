@@ -194,6 +194,14 @@ describe('PDF-style hard wraps', () => {
   });
 });
 
+describe('PDF page furniture', () => {
+  test('running headers and page numbers are removed', () => {
+    const result = run('Annual Report 2025          Page 4 of 38\nOur margin improved this year.\nPage 5\nMore text here.', 'plain');
+    assert.equal(result.text, 'Our margin improved this year.\nMore text here.');
+    assert.equal(result.notes.find((n) => n.id === 'page-furniture')?.count, 2);
+  });
+});
+
 describe('spreadsheet rows', () => {
   test('tab-separated rows become a table with a header', () => {
     const result = run('Name\tRole\nAna\tDesigner\nMarcus\tEngineer');

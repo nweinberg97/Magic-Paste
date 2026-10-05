@@ -34,14 +34,21 @@ describe('destination adapters', () => {
     assert.ok(result.notes.some((n) => n.id === 'table-as-text'));
   });
 
-  test('Google Docs and Notion: semantic structure', () => {
-    for (const destination of ['google-docs', 'notion', 'rich'] as const) {
+  test('Notion and rich editors: semantic structure', () => {
+    for (const destination of ['notion', 'rich'] as const) {
       assert.match(run(NOTES, destination).html!, /^<h2>Launch<\/h2><p>Shipped <strong>onboarding<\/strong>/);
     }
   });
 
-  test('Google Docs is delivered via the clipboard, everything else is intercepted', () => {
-    assert.equal(run(NOTES, 'google-docs').destination.delivery, 'clipboard');
+  test('Google Docs: headings match the document by default, Docs heading styles on request', () => {
+    const matched = run(NOTES, 'google-docs');
+    assert.match(matched.html!, /^<p><strong>Launch<\/strong><\/p><p>Shipped/);
+    assert.ok(matched.notes.some((n) => n.id === 'headings-flattened'));
+    assert.match(run(NOTES, 'google-docs', { docsHeadingStyles: true }).html!, /^<h2>Launch<\/h2>/);
+  });
+
+  test('Google Docs only accepts cleaned content through its own paste handler', () => {
+    assert.equal(run(NOTES, 'google-docs').destination.delivery, 'editor-only');
     for (const destination of ['gmail', 'slack', 'notion', 'rich', 'plain'] as const) {
       assert.equal(run(NOTES, destination).destination.delivery, 'intercept');
     }

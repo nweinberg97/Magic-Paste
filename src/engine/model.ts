@@ -6,12 +6,20 @@
  * tiny is what makes adding a new source or destination cheap.
  */
 
+/** The source's own look for a run, kept when pasting into a blank document. Values are allowlisted CSS. */
+export interface SourceFont {
+  family?: string;
+  size?: string;
+  color?: string;
+}
+
 export interface Marks {
   bold?: boolean;
   italic?: boolean;
   strike?: boolean;
   code?: boolean;
   href?: string;
+  font?: SourceFont;
 }
 
 export type Inline = { type: 'text'; text: string; marks: Marks } | { type: 'break' };
@@ -46,7 +54,10 @@ export function sameMarks(a: Marks, b: Marks): boolean {
     !!a.italic === !!b.italic &&
     !!a.strike === !!b.strike &&
     !!a.code === !!b.code &&
-    (a.href ?? '') === (b.href ?? '')
+    (a.href ?? '') === (b.href ?? '') &&
+    (a.font?.family ?? '') === (b.font?.family ?? '') &&
+    (a.font?.size ?? '') === (b.font?.size ?? '') &&
+    (a.font?.color ?? '') === (b.font?.color ?? '')
   );
 }
 

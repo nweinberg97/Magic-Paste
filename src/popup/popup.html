@@ -31,6 +31,16 @@
       <span class="site-text" id="site-text"></span>
       <button class="link" id="site-action" hidden></button>
     </section>
+    <p class="last-paste" id="last-paste" hidden></p>
+
+    <section class="block" id="style-block" hidden>
+      <h2>Document style</h2>
+      <p class="hint style-status" id="style-status"></p>
+      <div class="style-row">
+        <button class="btn" id="style-learn">Learn this style</button>
+        <button class="link" id="style-forget" hidden>Forget</button>
+      </div>
+    </section>
 
     <section class="block">
       <h2>Clean clipboard</h2>
@@ -38,7 +48,7 @@
         <select id="clip-destination" aria-label="Format clipboard for"></select>
         <button class="btn btn-primary" id="clip-clean">Clean</button>
       </div>
-      <p class="hint" id="clip-status">For apps that run their own paste, like Google Docs. Clean, then paste as usual.</p>
+      <p class="hint" id="clip-status">For desktop apps like Word, or any paste that comes out uncleaned. Clean, then paste as usual.</p>
     </section>
 
     <section class="block">
@@ -54,11 +64,15 @@
         <span>Destination-aware formatting<small>Adapt to Gmail, Slack, Notion and Docs. Off: generic clean HTML everywhere.</small></span>
         <input class="switch" type="checkbox" data-setting="destinationAware" />
       </label>
+      <label class="setting">
+        <span>Google Docs heading styles<small>Off: headings paste as bold text, so they match your document's own design.</small></span>
+        <input class="switch" type="checkbox" data-setting="docsHeadingStyles" />
+      </label>
       <label class="setting"><span>Show paste confirmation</span><input class="switch" type="checkbox" data-setting="showConfirmation" /></label>
     </details>
 
     <footer class="foot">
-      <button class="link" id="open-playground">Open playground</button>
+      <span class="foot-links"><button class="link" id="open-playground">Playground</button><button class="link" id="open-testkit">Test kit</button></span>
       <span id="version"></span>
     </footer>
 

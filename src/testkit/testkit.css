@@ -1,0 +1,255 @@
+@import "../ui/tokens.css";
+
+h1,
+h2,
+p,
+dl,
+dd {
+  margin: 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: blur(10px);
+}
+.bar-inner,
+main {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  font-weight: 650;
+  text-decoration: none;
+}
+.brand img {
+  border-radius: 6px;
+}
+.crumb {
+  padding-left: 12px;
+  border-left: 1px solid var(--line-2);
+  color: var(--ink-3);
+}
+.nav {
+  display: flex;
+  gap: 22px;
+  margin-left: auto;
+  font-size: 13px;
+}
+.nav a {
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.intro {
+  padding: 44px 0 28px;
+}
+.intro h1 {
+  font-size: 32px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.intro p {
+  margin-top: 10px;
+  color: var(--ink-2);
+  font-size: 16px;
+}
+.how {
+  margin: 18px 0 0;
+  padding-left: 20px;
+  color: var(--ink-2);
+}
+.how li {
+  margin-bottom: 4px;
+}
+.how b {
+  color: var(--ink);
+}
+
+.specimens {
+  display: grid;
+  gap: 18px;
+}
+.specimen {
+  padding: 18px 20px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  scroll-margin-top: 70px;
+}
+.specimen-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.num {
+  color: var(--ink-3);
+  font: 12px/22px var(--mono);
+}
+.titles {
+  flex: 1;
+}
+.specimen h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.from {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.watch {
+  margin: 12px 0 12px 32px;
+  color: var(--ink-2);
+}
+.watch b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.specimen-frame,
+.specimen-text {
+  display: block;
+  width: calc(100% - 32px);
+  margin-left: 32px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color-scheme: light;
+}
+.specimen-frame {
+  height: 200px;
+}
+.specimen-text {
+  max-height: 300px;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 12px 14px;
+  overflow: auto;
+  color: #222;
+  font: 12.5px/1.55 var(--mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.expect {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 6px 16px;
+  margin: 14px 0 0 32px;
+  font-size: 13.5px;
+}
+.expect dt {
+  color: var(--ink-3);
+}
+
+.results {
+  margin: 56px 0 72px;
+  scroll-margin-top: 70px;
+}
+.results-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.results h2 {
+  font-size: 18px;
+}
+.tally {
+  color: var(--ink-3);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th,
+td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  color: var(--ink-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+td.name a {
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.cell select {
+  width: 44px;
+  height: 26px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  text-align: center;
+}
+.cell.pass select {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.cell.fail select {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.cell input {
+  display: block;
+  width: 100%;
+  min-width: 90px;
+  margin-top: 4px;
+  padding: 3px 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+}
+.cell input[hidden] {
+  display: none;
+}
+.hint {
+  margin-top: 10px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+@media (max-width: 720px) {
+  .expect {
+    grid-template-columns: 1fr;
+  }
+  .watch,
+  .expect,
+  .specimen-frame,
+  .specimen-text {
+    margin-left: 0;
+    width: 100%;
+  }
+}

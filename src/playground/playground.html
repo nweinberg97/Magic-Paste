@@ -16,7 +16,8 @@
         <nav class="nav">
           <a href="#live">Try it live</a>
           <a href="#how">How it works</a>
-          <a href="https://github.com/nweinberg97/magic-paste">GitHub</a>
+          <a href="testkit.html">Test kit</a>
+          <a href="https://github.com/nweinberg97/Magic-Paste">GitHub</a>
         </nav>
       </div>
     </header>
@@ -67,6 +68,10 @@
       <section class="compare">
         <div class="compare-head">
           <div class="picker" id="destinations" role="radiogroup" aria-label="Destination"></div>
+          <div class="view-toggle" role="radiogroup" aria-label="Destination document">
+            <button role="radio" aria-checked="true" data-surface="formatted" title="The destination already has text and a design">Has formatting</button>
+            <button role="radio" aria-checked="false" data-surface="blank" title="An empty document or message">Blank</button>
+          </div>
           <div class="view-toggle" role="radiogroup" aria-label="View">
             <button role="radio" aria-checked="true" data-view="preview">Preview</button>
             <button role="radio" aria-checked="false" data-view="source">Output</button>
@@ -132,7 +137,7 @@
         <div class="limits">
           <h3>Honest limits</h3>
           <ul>
-            <li><b>Google Docs</b> draws its editor on a canvas and owns paste end to end, so the extension can't rewrite a paste in flight. Use <em>Clean clipboard</em> in the popup, then paste normally.</li>
+            <li><b>Google Docs</b> draws its editor on a canvas, so Magic Paste hands the cleaned content to Docs' own paste handler instead of inserting it. If Docs ever declines it, you get a normal paste; <em>Clean clipboard</em> in the popup is the backup.</li>
             <li><b>Images and files</b> pass through untouched. Turning screenshots of text into text would need OCR.</li>
             <li><b>Chrome pages</b> (chrome://, the Web Store, the built-in PDF viewer) don't allow extensions to run.</li>
             <li><b>Custom editors</b> are reached through their standard paste handling; an editor that ignores it gets a normal paste.</li>

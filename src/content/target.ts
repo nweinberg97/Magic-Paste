@@ -33,7 +33,7 @@ export function resolveTarget(eventTarget: EventTarget | null, hostname: string)
   const plaintext = host.getAttribute('contenteditable') === 'plaintext-only';
   return {
     element: host,
-    info: { hostname, kind: plaintext ? 'plaintext-editable' : 'rich', singleLine: false, codeEditor, override },
+    info: { hostname, kind: plaintext ? 'plaintext-editable' : 'rich', singleLine: false, codeEditor, override, empty: isBlank(host, hostname) },
   };
 }
 
@@ -42,4 +42,15 @@ function editingHost(element: Element): HTMLElement | null {
   let host: HTMLElement = element;
   while (host.parentElement?.isContentEditable) host = host.parentElement;
   return host;
+}
+
+/**
+ * Is this editor blank? Unknown (undefined) for canvas editors like Google
+ * Docs, whose visible text isn't in the page, and for hidden input surfaces.
+ */
+function isBlank(host: HTMLElement, hostname: string): boolean | undefined {
+  if (hostname === 'docs.google.com') return undefined;
+  const rect = (host.ownerDocument.defaultView?.frameElement ?? host).getBoundingClientRect();
+  if (rect.width < 4 || rect.height < 4) return undefined;
+  return !host.innerText.trim();
 }

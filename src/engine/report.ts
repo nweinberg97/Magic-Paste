@@ -27,10 +27,15 @@ export type NoteId =
   | 'email-spacing'
   | 'single-line'
   | 'emphasis-removed'
+  | 'matched-style'
+  | 'kept-source'
+  | 'page-furniture'
+  | 'invisible-text'
+  | 'oversized'
   | 'links-removed';
 
 /** Notes that only make sense when the destination renders rich text. */
-const RICH_ONLY: ReadonlySet<NoteId> = new Set(['md-headings', 'md-emphasis', 'md-links', 'md-lists', 'table']);
+const RICH_ONLY: ReadonlySet<NoteId> = new Set(['md-headings', 'md-emphasis', 'md-links', 'md-lists', 'table', 'matched-style', 'kept-source', 'invisible-text', 'oversized']);
 
 const MESSAGES: Record<NoteId, (n: number, detail?: string) => string> = {
   unsafe: () => 'Removed scripts and unsafe markup',
@@ -50,18 +55,23 @@ const MESSAGES: Record<NoteId, (n: number, detail?: string) => string> = {
   table: () => 'Turned tab-separated rows into a table',
   links: (n) => `Preserved ${n} ${plural(n, 'link')}`,
   'kept-markdown': () => 'Kept Markdown as text for a plain-text field',
-  'headings-flattened': (_n, dest) => `Headings converted to bold text for ${dest ?? 'this destination'}`,
+  'headings-flattened': (_n, dest) => `Headings pasted as bold text to match ${dest ?? 'the destination'}`,
   'table-as-text': () => 'Table converted to aligned text',
   'images-dropped': (n) => `Left out ${n} ${plural(n, 'image')} the destination can't accept`,
   'email-spacing': () => 'Applied email-friendly paragraph spacing',
   'single-line': () => 'Joined onto one line for a single-line field',
   'emphasis-removed': () => 'Removed bold and italic (per your settings)',
+  'page-furniture': (n) => `Removed ${n} page ${plural(n, 'header')} (“Page 4 of 38”)`,
+  'kept-source': () => 'Kept the original look (fonts, sizes, colours) for a blank document',
+  'invisible-text': (n) => `Fixed ${n} ${plural(n, 'bit')} of light text that would vanish on a white page`,
+  oversized: (n) => `Tamed ${n} oversized ${plural(n, 'letter')} (drop caps, giant text)`,
+  'matched-style': (_n, detail) => `Matched your document’s style${detail ? ` (${detail})` : ''}`,
   'links-removed': () => 'Removed links (per your settings)',
 };
 
 /** Display order: most meaningful changes first. */
 const ORDER: NoteId[] = [
-  'unsafe', 'styles', 'office', 'reflow', 'dehyphenate', 'bullets', 'numbering', 'md-lists', 'md-headings',
+  'matched-style', 'kept-source', 'invisible-text', 'oversized', 'unsafe', 'styles', 'office', 'page-furniture', 'reflow', 'dehyphenate', 'bullets', 'numbering', 'md-lists', 'md-headings',
   'md-emphasis', 'md-links', 'table', 'kept-markdown', 'headings-flattened', 'table-as-text', 'email-spacing',
   'single-line', 'whitespace', 'blank-lines', 'hidden-chars', 'links', 'images-dropped', 'emphasis-removed',
   'links-removed',
@@ -81,6 +91,11 @@ export class Report {
     if (count <= 0) return;
     this.counts.set(id, (this.counts.get(id) ?? 0) + count);
     if (detail) this.details.set(id, detail);
+  }
+
+  /** Drop a note that no longer describes the output. */
+  omit(id: NoteId): void {
+    this.counts.delete(id);
   }
 
   /** Notes relevant to the destination's rendering mode, in display order. */

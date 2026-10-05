@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { detectDestination, detectSource, type PasteTarget } from '../src/engine';
+import { ADAPTERS, choosePasteMode, detectDestination, detectSource, type PasteTarget } from '../src/engine';
 import { fingerprint, matchOrigin, siteName } from '../src/extension/origin';
 
 const target = (overrides: Partial<PasteTarget>): PasteTarget => ({
@@ -84,5 +84,26 @@ describe('copy origin', () => {
     assert.equal(siteName('chatgpt.com'), 'ChatGPT');
     assert.equal(siteName('en.wikipedia.org'), 'Wikipedia');
     assert.equal(siteName('www.example.org'), 'example.org');
+  });
+});
+
+describe('adapt or keep the source look', () => {
+  test('a destination with a design adapts; a blank one keeps the source look', () => {
+    assert.equal(choosePasteMode(ADAPTERS.gmail, { empty: false }, false), 'adapt');
+    assert.equal(choosePasteMode(ADAPTERS.gmail, { empty: true }, false), 'preserve');
+  });
+
+  test('a learned document style always wins', () => {
+    assert.equal(choosePasteMode(ADAPTERS['google-docs'], { empty: undefined }, true), 'match-style');
+    assert.equal(choosePasteMode(ADAPTERS.rich, { empty: true }, true), 'match-style');
+  });
+
+  test('when blankness is unknown (Google Docs) and nothing was learned, keep the source look', () => {
+    assert.equal(choosePasteMode(ADAPTERS['google-docs'], { empty: undefined }, false), 'preserve');
+  });
+
+  test('text fields and Slack can’t hold styles, so they always adapt', () => {
+    assert.equal(choosePasteMode(ADAPTERS.plain, { empty: true }, true), 'adapt');
+    assert.equal(choosePasteMode(ADAPTERS.slack, { empty: true }, false), 'adapt');
   });
 });

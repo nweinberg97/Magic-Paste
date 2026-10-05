@@ -15,17 +15,32 @@
     <!-- Stand-in for framework editors (ProseMirror, Lexical, Slate): they handle paste themselves. -->
     <div id="framework" contenteditable="true" style="min-height: 40px"></div>
 
+    <!-- Google Docs-style destinations: cleaned content only goes through the editor's own paste handler. -->
+    <div data-magic-paste-destination="google-docs">
+      <div id="docs-handled" contenteditable="true" style="min-height: 40px"></div>
+      <div id="docs-unhandled" contenteditable="true" style="min-height: 40px"></div>
+    </div>
+
+    <!-- Like Google Docs: typing happens in a hidden about:blank iframe with an editable body. -->
+    <iframe id="frame-editor" style="width: 1px; height: 1px; border: 0"></iframe>
+
     <!-- Code editors must never be touched. -->
     <div class="cm-editor"><div id="code" contenteditable="true" style="min-height: 40px"></div></div>
 
     <script>
-      const framework = document.getElementById('framework');
-      framework.addEventListener('paste', (event) => {
-        event.preventDefault();
-        framework.dataset.receivedHtml = event.clipboardData.getData('text/html');
-        framework.dataset.receivedText = event.clipboardData.getData('text/plain');
-        framework.dataset.pasteCount = String(Number(framework.dataset.pasteCount || 0) + 1);
-      });
+      const frameDoc = document.getElementById('frame-editor').contentDocument;
+      frameDoc.body.contentEditable = 'true';
+      frameDoc.body.dataset.magicPasteDestination = 'google-docs';
+
+      for (const id of ['framework', 'docs-handled']) {
+        const editor = document.getElementById(id);
+        editor.addEventListener('paste', (event) => {
+          event.preventDefault();
+          editor.dataset.receivedHtml = event.clipboardData.getData('text/html');
+          editor.dataset.receivedText = event.clipboardData.getData('text/plain');
+          editor.dataset.pasteCount = String(Number(editor.dataset.pasteCount || 0) + 1);
+        });
+      }
     </script>
   </body>
 </html>

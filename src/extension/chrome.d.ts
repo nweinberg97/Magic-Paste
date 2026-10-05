@@ -34,6 +34,7 @@ declare namespace chrome {
     interface Tab {
       id?: number;
       url?: string;
+      title?: string;
     }
     function query(queryInfo: { active?: boolean; currentWindow?: boolean }): Promise<Tab[]>;
     function create(properties: { url: string }): Promise<Tab>;

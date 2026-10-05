@@ -93,9 +93,11 @@ function normalizeInlines(content: Inline[], report: Report): Inline[] {
       merged.push(node);
       continue;
     }
-    let value = node.marks.code ? node.text : collapseSpaces(node.text.replace(/\n/g, ' '), report);
+    // Inline code keeps its spacing; whitespace-only "code" (a font leftover, e.g. Word bullets) is just space.
+    const code = node.marks.code && !!node.text.trim();
+    let value = code ? node.text : collapseSpaces(node.text.replace(/\n/g, ' '), report);
     // Formatting on pure whitespace is invisible noise (and breaks Markdown output).
-    const marks = value.trim() || node.marks.code ? node.marks : {};
+    const marks = value.trim() ? node.marks : {};
     const previous = merged.at(-1);
     if (previous?.type === 'text') {
       if (previous.text.endsWith(' ') && value.startsWith(' ')) value = value.slice(1);

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { ADAPTERS, type DestinationId } from '../src/engine';
 import { SAMPLES } from '../src/playground/samples';
+import { SPECIMENS } from '../src/testkit/specimens';
 import { assertOk, launchEngine, type BrowserEngine } from './support/browser';
 
 let engine: BrowserEngine;
@@ -60,8 +61,8 @@ describe('HTML input', () => {
     // The HTML spec's repair carries the open <b><i> forward; we keep that meaning and nothing else.
     assert.equal(
       result.html,
-      '<p>Unclosed <strong>bold </strong><strong><em>both</em></strong></p><p><strong><em>stray item</em></strong></p>' +
-        '<table><tbody><tr><td>a</td><td>b</td></tr></tbody></table>',
+      // (A one-row table is layout, like an email signature, so its cells become paragraphs.)
+      '<p>Unclosed <strong>bold </strong><strong><em>both</em></strong></p><p><strong><em>stray item</em></strong></p><p>a</p><p>b</p>',
     );
   });
 
@@ -89,6 +90,73 @@ describe('HTML input', () => {
     const vscode =
       '<div style="color: #d4d4d4;background-color: #1e1e1e;font-family: Menlo, monospace;white-space: pre;"><div><span style="color: #c586c0;">if</span> (ready) {</div><div>  <span style="color: #dcdcaa;">ship</span>();</div><div>}</div></div>';
     assert.equal((await html(vscode)).html, '<pre><code>if (ready) {\n  ship();\n}</code></pre>');
+  });
+});
+
+describe('keeping the source look (blank destinations)', () => {
+  const keep = async (markup: string) => {
+    const result = await engine.transform({ html: markup, text: 'x' }, { destination: 'rich', mode: 'preserve' });
+    assertOk(result);
+    return result;
+  };
+
+  test('keeps fonts, sizes and colours, including those set on blocks', async () => {
+    const result = await keep('<h1 style="font-family:Georgia;font-size:30px;color:#1f3a8a">Title</h1><ul style="font-size:18px"><li>Item</li></ul>');
+    assert.equal(
+      result.html,
+      '<h1><span style="font-family:Georgia;font-size:30px;color:#1f3a8a">Title</span></h1><ul><li><span style="font-size:18px">Item</span></li></ul>',
+    );
+    assert.ok(result.noteIds.includes('kept-source'));
+    assert.ok(!result.noteIds.includes('styles'));
+  });
+
+  test('repairs what would malfunction: invisible light text, drop caps, backgrounds, layout', async () => {
+    const result = await keep(
+      '<p style="color:#fafafa;background:#000;width:600px;position:absolute">Dark mode</p><p><span style="float:left;font-size:66px">E</span>very day</p>',
+    );
+    assert.equal(result.html, '<p>Dark mode</p><p>Every day</p>');
+    assert.ok(result.noteIds.includes('invisible-text'));
+    assert.ok(result.noteIds.includes('oversized'));
+  });
+
+  test('the same paste into a destination with a design drops the source look entirely', async () => {
+    const result = await engine.transform({ html: '<p style="font-family:Georgia;color:#1f3a8a">Hello <b>there</b></p>', text: 'x' }, { destination: 'rich' });
+    assertOk(result);
+    assert.equal(result.html, '<p>Hello <strong>there</strong></p>');
+    assert.ok(!result.noteIds.includes('kept-source'));
+  });
+});
+
+describe('tables', () => {
+  test('merged cells are expanded so columns stay aligned', async () => {
+    const result = await html(
+      '<table><tr><th rowspan="2">Plan</th><th colspan="2">Limits</th></tr><tr><th>Rate</th><th>Storage</th></tr><tr><td>Pro</td><td colspan="2">Custom</td></tr></table>',
+    );
+    assert.equal(
+      result.html,
+      '<table><thead><tr><th>Plan</th><th>Limits</th><th></th></tr></thead><tbody><tr><td></td><td>Rate</td><td>Storage</td></tr><tr><td>Pro</td><td>Custom</td><td></td></tr></tbody></table>',
+    );
+  });
+
+  test('a bold first row is a header; one-row layout tables (signatures) dissolve', async () => {
+    assert.match((await html('<table><tr><td><b>A</b></td><td><b>B</b></td></tr><tr><td>1</td><td>2</td></tr></table>')).html!, /^<table><thead>/);
+    assert.equal((await html('<table><tr><td><img src="https://example.com/logo.png" alt="Logo"></td><td><b>Jordan</b><br>Acme</td></tr></table>')).html, '<img src="https://example.com/logo.png" alt="Logo"><p><strong>Jordan</strong><br>Acme</p>');
+  });
+});
+
+describe('more real-world repairs', () => {
+  test('emoji sequences survive (zero-width joiners are kept)', async () => {
+    const result = await html('<p>👩🏽‍💻 and 👨‍👩‍👧</p>');
+    assert.equal(result.html, '<p>👩🏽‍💻 and 👨‍👩‍👧</p>');
+  });
+
+  test('Word list markers without mso-list:Ignore are removed', async () => {
+    const result = await html('<p style="mso-list:l0 level1 lfo1"><span style="font-family:Symbol">·</span><span>&nbsp;&nbsp;&nbsp;</span>Budget approved</p><p style="mso-list:l0 level2 lfo1">o&nbsp;&nbsp;Marketing</p>');
+    assert.equal(result.html, '<ul><li>Budget approved<ul><li>Marketing</li></ul></li></ul>');
+  });
+
+  test('flex layouts keep their visual spacing', async () => {
+    assert.equal((await html('<div style="display:flex"><span>By Amara</span><span>·</span><time>Oct 2</time></div>')).html, '<p>By Amara · Oct 2</p>');
   });
 });
 
@@ -131,8 +199,8 @@ describe('demo samples', () => {
         const result = await engine.transform(sample.payload, { destination });
         assertOk(result);
         assert.ok(result.text.trim(), `${sample.id} → ${destination}: empty text`);
-        // Tab-separated rows are already the right plain-text form, so that paste passes through.
-        const alreadyClean = sample.id === 'sheet-docs' && destination === 'plain';
+        // Already-right content passes through untouched: TSV in a text field, semantic HTML in a semantic editor.
+        const alreadyClean = ['sheet-docs→plain', 'resume-template→notion', 'resume-template→rich'].includes(`${sample.id}→${destination}`);
         assert.equal(result.changed, !alreadyClean, `${sample.id} → ${destination}: changed`);
         if (ADAPTERS[destination].mode === 'rich') assert.ok(!/style=|class=|<span|<font/.test(result.html!.replace(/<table border[^>]*>/g, '')), `${sample.id} → ${destination}: leaked styling`);
       }
@@ -149,11 +217,29 @@ describe('demo samples', () => {
       'gdocs-rich': ['styles', 'blank-lines', 'whitespace'],
       'sheet-docs': ['table'],
       'blog-gmail': ['styles', 'headings-flattened', 'email-spacing'],
+      'resume-template': ['headings-flattened'], // its style-matching is covered in style.test.ts
     };
     for (const sample of SAMPLES) {
       const result = await engine.transform(sample.payload, { destination: sample.destination });
       assertOk(result);
       for (const id of expectations[sample.id]) assert.ok(result.noteIds.includes(id), `${sample.id} should report ${id}; got ${result.noteIds}`);
+    }
+  });
+});
+
+describe('test kit specimens', () => {
+  test('every specimen transforms safely, in every destination, both adapting and keeping its look', async () => {
+    for (const specimen of SPECIMENS) {
+      for (const destination of Object.keys(ADAPTERS) as DestinationId[]) {
+        for (const mode of ['adapt', 'preserve'] as const) {
+          const result = await engine.transform({ html: specimen.html, text: specimen.text }, { destination, mode });
+          assertOk(result);
+          const out = result.html ?? result.text;
+          assert.ok(result.text.trim(), `${specimen.id} → ${destination}/${mode}: empty`);
+          assert.doesNotMatch(out, /<script|onerror=|onclick=|onload=|javascript:|<iframe|<form|<input|style="[^"]*background/i, `${specimen.id} → ${destination}/${mode}: unsafe or layout markup`);
+          assert.ok(result.ms < 1000, `${specimen.id} took ${result.ms}ms`);
+        }
+      }
     }
   });
 });

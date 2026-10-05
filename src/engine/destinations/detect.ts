@@ -1,6 +1,8 @@
 import { ADAPTERS } from './adapters';
 import type { DestinationAdapter, DestinationId, PasteTarget } from './types';
 
+export type PasteMode = 'match-style' | 'adapt' | 'preserve';
+
 const SITE_RULES: [RegExp, DestinationId][] = [
   [/^docs\.google\.com$/, 'google-docs'],
   [/^mail\.google\.com$/, 'gmail'],
@@ -27,4 +29,17 @@ export function detectDestination(target: PasteTarget, destinationAware = true):
   if (isDestinationId(target.override)) return ADAPTERS[target.override];
   if (target.kind !== 'rich') return ADAPTERS.plain;
   return destinationAware ? destinationForHost(target.hostname) : ADAPTERS.rich;
+}
+
+/**
+ * The core rule. A destination that already has a design gets content in
+ * that design; a blank one keeps the look you copied (repaired). Fields that
+ * can't hold styles (text inputs, Slack) always adapt.
+ */
+export function choosePasteMode(destination: DestinationAdapter, target: Pick<PasteTarget, 'empty'>, hasLearnedStyle: boolean): PasteMode {
+  if (destination.mode === 'plain' || destination.id === 'slack') return 'adapt';
+  if (hasLearnedStyle) return 'match-style';
+  // Unknown (a canvas editor without a learned style) is treated as blank:
+  // keeping the source's look is the safer guess than inventing one.
+  return target.empty === false ? 'adapt' : 'preserve';
 }

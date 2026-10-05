@@ -89,6 +89,20 @@ body.off .state {
 .site.notice .site-dot {
   background: var(--accent);
 }
+.last-paste {
+  margin: 8px 2px 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.last-paste.ok::before {
+  content: "✓ ";
+  color: var(--ok);
+}
+.last-paste.skipped::before {
+  content: "• ";
+  color: var(--accent);
+}
 .site-text {
   flex: 1;
   min-width: 0;
@@ -122,6 +136,14 @@ select {
   border-radius: var(--radius-sm);
   background: var(--surface);
   font-size: 13px;
+}
+.style-status {
+  margin: 0 0 9px;
+}
+.style-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 .hint {
   margin-top: 7px;
@@ -247,4 +269,9 @@ select {
 body.off .site,
 body.off .behaviour {
   opacity: 0.55;
+}
+
+.foot-links {
+  display: flex;
+  gap: 14px;
 }

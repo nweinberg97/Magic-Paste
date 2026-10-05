@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Magic Paste · Test kit</title>
+    <link rel="icon" href="icons/icon.svg" />
+    <link rel="stylesheet" href="testkit.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="bar-inner">
+        <a class="brand" href="playground.html"><img src="icons/icon.svg" alt="" width="22" height="22" />Magic Paste</a>
+        <span class="crumb">Test kit</span>
+        <nav class="nav"><a href="#results">Results</a><a href="playground.html">Playground</a></nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <h1>Test kit</h1>
+        <p>Sixteen hard things to paste. For each one, copy it, paste it into each destination, and mark what happened.</p>
+        <ol class="how">
+          <li><b>Copy</b> with <em>Copy exactly</em> (a precise clipboard), or select the specimen and copy it yourself (a real-world copy).</li>
+          <li><b>Paste</b> into a document that already has formatting <em>and</em> into a blank one. Read the card in the corner: it says what Magic Paste did.</li>
+          <li><b>Mark</b> each destination in the results table, then <em>Copy results</em> and send them over.</li>
+        </ol>
+      </section>
+
+      <section class="specimens" id="specimens"></section>
+
+      <section class="results" id="results">
+        <div class="results-head">
+          <h2>Results</h2>
+          <span class="spacer"></span>
+          <span class="tally" id="tally"></span>
+          <button class="btn" id="reset">Reset</button>
+          <button class="btn btn-primary" id="copy-results">Copy results</button>
+        </div>
+        <div class="table-wrap"><table id="results-table"></table></div>
+        <p class="hint">✓ worked · ✗ wrong (add a note) · – not tested. Marks are saved in this browser.</p>
+      </section>
+    </main>
+
+    <script src="testkit.js"></script>
+  </body>
+</html>

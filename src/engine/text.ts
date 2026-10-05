@@ -1,7 +1,11 @@
 import type { Report } from './report';
 
-/** Zero-width characters, BOM, word joiner and soft hyphen: invisible noise from PDFs, CMSs and editors. */
-const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF\u00AD]/g;
+/**
+ * Zero-width space, word joiner, BOM and soft hyphen: invisible noise from
+ * PDFs, CMSs and editors. Zero-width joiners (U+200C/U+200D) are kept: they
+ * hold emoji sequences like 👩🏽‍💻 together and matter in Persian and Indic text.
+ */
+const INVISIBLE = /[\u200B\u2060\uFEFF\u00AD]/g;
 /** Non-breaking and other fixed-width spaces that render as stubborn gaps. */
 const ODD_SPACES = /[\u00A0\u2007\u202F\u2009\u200A\u3000]/g;
 

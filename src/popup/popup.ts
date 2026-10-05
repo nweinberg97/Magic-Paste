@@ -1,12 +1,17 @@
-import { ADAPTERS, destinationForHost, transform, type DestinationId } from '../engine';
+import { ADAPTERS, describeProfile, destinationForHost, learnStyle, transform, type DestinationId } from '../engine';
 import { loadActivity, type ActivityEntry } from '../extension/activity';
 import { loadSettings, updateSettings, type Settings } from '../extension/settings';
+import { loadLastPastes } from '../extension/last-paste';
+import { forgetStyle, loadStyles, saveStyle, styleScope, type SavedStyle } from '../extension/styles';
 import { modKey, readClipboard, writeClipboard } from '../ui/clipboard';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 let settings: Settings;
 let hostname = '';
+let scope: string | null = null;
+let pageTitle = '';
+let savedStyle: SavedStyle | undefined;
 
 async function init(): Promise<void> {
   document.querySelectorAll('[data-mod-key]').forEach((el) => (el.textContent = modKey));
@@ -15,17 +20,24 @@ async function init(): Promise<void> {
   const [loaded, [tab]] = await Promise.all([loadSettings(), chrome.tabs.query({ active: true, currentWindow: true })]);
   settings = loaded;
   hostname = webHostname(tab?.url);
+  scope = styleScope(tab?.url);
+  pageTitle = (tab?.title ?? '').replace(/ - Google Docs$/, '').trim() || hostname;
+  savedStyle = scope ? (await loadStyles())[scope] : undefined;
 
   bindSettings();
   renderPower();
   renderSite();
+  setupStyle();
   setupClipboard();
   renderActivity(await loadActivity());
+  renderLastPaste();
 
-  $('open-playground').addEventListener('click', () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL('playground.html') });
-    window.close();
-  });
+  for (const [id, page] of [['open-playground', 'playground.html'], ['open-testkit', 'testkit.html']]) {
+    $(id).addEventListener('click', () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL(page) });
+      window.close();
+    });
+  }
 }
 
 function webHostname(url: string | undefined): string {
@@ -88,14 +100,49 @@ function renderSite(): void {
     site.classList.add('muted');
     text.innerHTML = `Paused on <b></b>`;
     text.querySelector('b')!.textContent = hostname;
-  } else if (destination.delivery === 'clipboard') {
-    site.classList.add('notice');
-    text.innerHTML = `<b>${destination.label}</b> runs its own paste. Use Clean clipboard below.`;
   } else {
     const label = settings.destinationAware ? destination.label : ADAPTERS.rich.label;
     text.innerHTML = `Formatting for <b></b> on this site`;
     text.querySelector('b')!.textContent = label;
   }
+}
+
+function setupStyle(): void {
+  const block = $('style-block');
+  const status = $('style-status');
+  const learn = $<HTMLButtonElement>('style-learn');
+  const forget = $<HTMLButtonElement>('style-forget');
+  block.hidden = !scope;
+  if (!scope) return;
+
+  const show = (message?: string, tone: 'ok' | 'error' | '' = '') => {
+    learn.textContent = savedStyle ? 'Relearn' : 'Learn this style';
+    forget.hidden = !savedStyle;
+    status.className = `hint ${tone}`;
+    if (message) status.textContent = message;
+    else if (savedStyle) status.textContent = `Pastes here match “${savedStyle.label}”. ${describeProfile(savedStyle.profile)}`;
+    else status.textContent = 'Make pastes match this document: copy a section of it (a heading, an entry, a few bullets), then click Learn this style.';
+  };
+
+  learn.addEventListener('click', async () => {
+    try {
+      const { html } = await readClipboard();
+      if (!html) return show('Copy straight from the document, so its formatting comes along, then try again.', 'error');
+      const profile = learnStyle(html);
+      if (!profile) return show('Couldn’t find styled text in what you copied. Try a bigger section.', 'error');
+      savedStyle = { profile, label: pageTitle, learnedAt: Date.now() };
+      await saveStyle(scope!, savedStyle);
+      show(`${describeProfile(profile)} Pastes here now match it.`, 'ok');
+    } catch {
+      show('Chrome blocked clipboard access. Click again, or allow clipboard access for Magic Paste.', 'error');
+    }
+  });
+  forget.addEventListener('click', async () => {
+    await forgetStyle(scope!);
+    savedStyle = undefined;
+    show();
+  });
+  show();
 }
 
 function setupClipboard(): void {
@@ -112,7 +159,7 @@ function setupClipboard(): void {
   $('clip-clean').addEventListener('click', async () => {
     try {
       const payload = await readClipboard();
-      const result = transform(payload, { destination: select.value as DestinationId, settings });
+      const result = transform(payload, { destination: select.value as DestinationId, settings, style: savedStyle?.profile });
       if (!result.ok) {
         report(result.reason === 'empty' ? 'Your clipboard is empty. Copy something first.' : 'Couldn’t read that content. Your clipboard is unchanged.', 'error');
         return;
@@ -128,6 +175,17 @@ function setupClipboard(): void {
       report('Chrome blocked clipboard access. Click Clean again, or allow clipboard access for Magic Paste.', 'error');
     }
   });
+}
+
+/** "Did that work?" — the outcome of the last paste on this site. */
+async function renderLastPaste(): Promise<void> {
+  const el = $('last-paste');
+  const last = hostname ? (await loadLastPastes())[hostname] : undefined;
+  el.hidden = !last;
+  if (!last) return;
+  el.className = `last-paste ${last.cleaned ? 'ok' : 'skipped'}`;
+  const when = ago(last.at);
+  el.textContent = `Last paste here (${when === 'now' ? 'just now' : `${when} ago`}): ${last.summary}`;
 }
 
 function renderActivity(entries: ActivityEntry[]): void {

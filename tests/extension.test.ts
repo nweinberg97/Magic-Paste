@@ -55,13 +55,20 @@ async function freshPage(): Promise<void> {
   await page.waitForTimeout(150); // let the content script load settings
 }
 
+/** Give an editor existing content, so pastes adapt to it rather than keep the source's look. */
+async function prefill(selector: string): Promise<void> {
+  await page.$eval(selector, (el) => {
+    el.innerHTML = '<p>Existing notes</p>';
+  });
+}
+
 async function paste(selector: string, payload: { text: string; html?: string }): Promise<void> {
+  await page.click(selector); // focus first: the clipboard API only works in a focused document
   await page.evaluate(async ({ text, html }) => {
     const parts: Record<string, Blob> = { 'text/plain': new Blob([text], { type: 'text/plain' }) };
     if (html) parts['text/html'] = new Blob([html], { type: 'text/html' });
     await navigator.clipboard.write([new ClipboardItem(parts)]);
   }, payload);
-  await page.click(selector);
   await page.keyboard.press('ControlOrMeta+V');
   await page.waitForTimeout(100);
 }
@@ -85,8 +92,9 @@ describe('extension end to end', () => {
     assert.equal(await page.inputValue('#input'), 'Weekly plan for the team');
   });
 
-  test('plain contenteditable receives sanitized semantic HTML', async () => {
+  test('an editor that already has content: pasted content adopts its formatting', async () => {
     await freshPage();
+    await prefill('#rich');
     await paste('#rich', STYLED);
     const markup = await page.innerHTML('#rich');
     assert.match(markup, /<h2>Rate limits<\/h2>/);
@@ -95,13 +103,93 @@ describe('extension end to end', () => {
     assert.doesNotMatch(markup, /Georgia|34px|fffbe6|purple/);
   });
 
+  test('a blank editor: pasted content keeps its own look, minus the malfunctions', async () => {
+    await freshPage();
+    await paste('#rich', {
+      text: 'Rate limits',
+      html:
+        '<h2 style="font-family:Georgia;font-size:28px;color:#1f3a8a">Rate limits</h2>' +
+        '<p style="background:#111;color:#f5f5f5">Copied from a dark-mode page</p>' +
+        '<p><span style="float:left;font-size:66px">E</span>very drop cap</p>',
+    });
+    const markup = await page.innerHTML('#rich');
+    assert.match(markup, /font-family: ?Georgia/); // the source's font survives
+    assert.match(markup, /28px/);
+    assert.match(markup, /#1f3a8a|rgb\(31, 58, 138\)/);
+    assert.doesNotMatch(markup, /#111|f5f5f5|245, 245, 245|66px/); // dark backgrounds, invisible text, drop caps don't
+  });
+
   test('framework editors get the cleaned data through their own paste handler, exactly once', async () => {
     await freshPage();
+    await prefill('#framework');
     await paste('#framework', STYLED);
     const data = await page.$eval('#framework', (el) => ({ ...(el as HTMLElement).dataset }));
     assert.equal(data.pasteCount, '1');
     assert.equal(data.receivedHtml, '<h2>Rate limits</h2><p>Use <strong>backoff</strong>, see <a href="https://example.com/docs">docs</a>.</p>');
     assert.equal(data.receivedText, 'Rate limits\n\nUse backoff, see docs (https://example.com/docs).');
+  });
+
+  test('Google Docs-style editors get cleaned content through their own paste handler, headings matching the document', async () => {
+    await freshPage();
+    await prefill('#docs-handled');
+    await paste('#docs-handled', STYLED);
+    const data = await page.$eval('#docs-handled', (el) => ({ ...(el as HTMLElement).dataset }));
+    assert.equal(data.pasteCount, '1');
+    assert.equal(data.receivedHtml, '<p><strong>Rate limits</strong></p><p>Use <strong>backoff</strong>, see <a href="https://example.com/docs">docs</a>.</p>');
+  });
+
+  test('if a Google Docs-style editor declines, the normal paste goes through (nothing inserted twice)', async () => {
+    await freshPage();
+    await paste('#docs-unhandled', STYLED);
+    const markup = await page.innerHTML('#docs-unhandled');
+    assert.match(markup, /Georgia|34px/); // the browser's own paste, untouched
+    assert.equal((markup.match(/Rate limits/g) ?? []).length, 1);
+  });
+
+  test('a learned document style is applied to pastes on that page', async () => {
+    const profile = {
+      version: 1,
+      heading: { text: { fontFamily: "'Times New Roman', serif", fontSize: '13pt', color: '#2f4b8c', bold: true }, block: {}, caps: true, ruleBefore: true },
+      body: { text: { fontFamily: "'Times New Roman', serif", fontSize: '11.5pt', color: '#000000' }, block: {} },
+    };
+    await worker.evaluate((profile) => chrome.storage.local.set({ documentStyles: { 'site:127.0.0.1': { profile, label: 'Resume', learnedAt: 0 } } }), profile);
+    await freshPage();
+    await paste('#framework', STYLED);
+    const html = await page.$eval('#framework', (el) => (el as HTMLElement).dataset.receivedHtml ?? '');
+    assert.match(html, /^<hr[^>]*><p[^>]*><span style="[^"]*color:#2f4b8c[^"]*">RATE LIMITS<\/span><\/p>/);
+    assert.match(html, /font-size:11.5pt[^"]*">Use <strong>backoff<\/strong>/);
+    await worker.evaluate(() => chrome.storage.local.set({ documentStyles: {} }));
+  });
+
+  test('every paste says what happened: cleaned, or why not', async () => {
+    const toast = () => page.$eval('#magic-paste-toast', (el) => (el as HTMLElement).dataset.tone).catch(() => null);
+    await freshPage();
+    await paste('#rich', STYLED);
+    assert.equal(await toast(), 'cleaned');
+
+    await freshPage();
+    await paste('#textarea', { text: 'Nothing to fix here.' });
+    assert.equal(await toast(), 'normal');
+  });
+
+  test('feedback from an editor inside a hidden iframe (like Google Docs) shows on the visible page', async () => {
+    await freshPage();
+    await page.evaluate(async (payload) => {
+      await navigator.clipboard.write([new ClipboardItem({ 'text/plain': new Blob([payload.text], { type: 'text/plain' }), 'text/html': new Blob([payload.html], { type: 'text/html' }) })]);
+    }, STYLED);
+    const frame = page.frameLocator('#frame-editor');
+    await frame.locator('body').focus();
+    await page.keyboard.press('ControlOrMeta+V');
+    await page.waitForTimeout(150);
+    // The frame's editor doesn't accept the cleaned paste, so the user is told, on the top page.
+    assert.equal(await page.$eval('#magic-paste-toast', (el) => (el as HTMLElement).dataset.tone), 'warning');
+  });
+
+  test('content Magic Paste already cleaned (Clean clipboard, Copy cleaned version) is pasted as-is, and says so', async () => {
+    await freshPage();
+    await paste('#rich', { text: 'Rate limits', html: '<meta name="generator" content="magic-paste"><p><strong>Rate limits</strong></p>' });
+    assert.equal(await page.innerHTML('#rich'), '<p><strong>Rate limits</strong></p>');
+    assert.equal(await page.$eval('#magic-paste-toast', (el) => (el as HTMLElement).dataset.tone), 'cleaned');
   });
 
   test('code editors are left alone', async () => {

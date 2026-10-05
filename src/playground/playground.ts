@@ -1,6 +1,7 @@
-import { installPasteInterceptor, type SkipReason } from '../content/interceptor';
+import { cleanedFeedback, skippedFeedback } from '../content/feedback';
+import { installPasteInterceptor } from '../content/interceptor';
 import { showToast } from '../content/toast';
-import { ADAPTERS, transform, type DestinationId, type PastePayload, type TransformResult } from '../engine';
+import { ADAPTERS, choosePasteMode, learnStyle, type PasteMode, transform, type DestinationId, type PastePayload, type TransformResult } from '../engine';
 import { DEFAULT_SETTINGS } from '../extension/settings';
 import { modKey, writeClipboard } from '../ui/clipboard';
 import { SAMPLES, type Sample } from './samples';
@@ -20,6 +21,8 @@ const state = {
   sample: undefined as Sample | undefined,
   destination: 'gmail' as DestinationId,
   view: 'preview' as 'preview' | 'source',
+  surface: 'formatted' as 'formatted' | 'blank',
+  mode: 'adapt' as PasteMode,
   result: undefined as TransformResult | undefined,
   liveEnabled: true,
 };
@@ -111,6 +114,12 @@ function renderDestinations(): void {
       return button;
     }),
   );
+  document.querySelectorAll<HTMLButtonElement>('[data-surface]').forEach((button) =>
+    button.addEventListener('click', () => {
+      state.surface = button.dataset.surface as 'formatted' | 'blank';
+      update();
+    }),
+  );
   document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((button) =>
     button.addEventListener('click', () => {
       state.view = button.dataset.view as 'preview' | 'source';
@@ -125,11 +134,18 @@ function renderDestinations(): void {
 function update(): void {
   const { payload, destination } = state;
   const hasInput = !!(payload.html || payload.text?.trim());
-  state.result = hasInput ? transform(payload, { destination, settings: DEFAULT_SETTINGS }) : undefined;
+  // Cases with a template show style matching: the destination's look, learned from a copied sample.
+  const learned = state.sample?.template ? (learnStyle(state.sample.template) ?? undefined) : undefined;
+  // The same rule the extension uses: designed destination → adapt, blank → keep the source's look.
+  const mode = (state.mode = choosePasteMode(ADAPTERS[destination], { empty: state.surface === 'blank' }, !!learned));
+  state.result = hasInput
+    ? transform(payload, { destination, settings: DEFAULT_SETTINGS, style: mode === 'match-style' ? learned : undefined, mode: mode === 'preserve' ? 'preserve' : 'adapt' })
+    : undefined;
 
   document.querySelectorAll<HTMLElement>('.case').forEach((c) => c.classList.toggle('active', c.dataset.id === state.sample?.id));
   document.querySelectorAll<HTMLElement>('[data-destination]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.destination === destination)));
   document.querySelectorAll<HTMLElement>('[data-view]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.view === state.view)));
+  document.querySelectorAll<HTMLElement>('[data-surface]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.surface === state.surface)));
 
   $('problem').textContent = state.sample?.problem ?? '';
   const chip = $('source-chip');
@@ -257,21 +273,12 @@ function renderChanges(): void {
   } else {
     for (const note of result.notes) list.append(el('li', '', note.message));
   }
-  const delivery = result.destination.delivery === 'clipboard' ? ' · delivered via Clean clipboard' : '';
-  trace.textContent = `Read as ${result.source.label} → formatted for ${result.destination.label} in ${result.ms.toFixed(1)} ms${delivery}`;
+  const how = { adapt: 'adapted to', preserve: 'kept its own look in a blank', 'match-style': 'matched the learned style of' }[state.mode];
+  trace.textContent = `Read as ${result.source.label} → ${how} ${result.destination.label} · ${result.ms.toFixed(1)} ms`;
 }
 
 // ---------------------------------------------------------------------------
 // Live interceptor demo
-
-const SKIP_MESSAGES: Partial<Record<SkipReason, string>> = {
-  'nothing-to-fix': 'Already clean, so Magic Paste stepped aside and the browser pasted normally.',
-  'plain-paste-shortcut': 'Shift+paste is your “paste as plain text”. Magic Paste respects it.',
-  'clipboard-only-destination': 'Google Docs owns its paste, so the extension never intercepts there. This was a normal paste.',
-  'transform-failed': 'Nothing Magic Paste could improve. Normal paste.',
-  files: 'Files and images pass through untouched.',
-  disabled: 'Magic Paste is off: this was a normal browser paste.',
-};
 
 function renderLive(): void {
   const destination = ADAPTERS[state.destination];
@@ -292,13 +299,23 @@ function setupLive(): void {
   installPasteInterceptor(window, {
     hostname: 'playground',
     getSettings: () => ({ ...DEFAULT_SETTINGS, enabled: state.liveEnabled }),
-    onPasted({ result, element }) {
-      const fixes = result.notes.filter((n) => n.id !== 'links').length;
-      showToast(element, `${result.destination.label} · ${fixes} ${fixes === 1 ? 'fix' : 'fixes'}`);
+    onPasted({ result, mode }) {
+      showToast(cleanedFeedback(result, mode));
       note.textContent = result.notes.map((n) => n.message).join(' · ');
     },
-    onSkip(reason) {
-      if (inLive()) note.textContent = SKIP_MESSAGES[reason] ?? '';
+    onSkip(reason, context) {
+      const { destination } = context;
+      if (!inLive()) return;
+      // In this demo box, a declined Google Docs paste means the box isn't Docs, not that Docs refused.
+      const feedback =
+        reason === 'not-delivered'
+          ? { tone: 'normal' as const, title: 'Pasted normally', meta: destination, lines: ['In Google Docs, Magic Paste hands the cleaned paste to Docs itself. This box isn’t Docs, so it pasted normally.'] }
+          : reason === 'disabled'
+            ? { tone: 'normal' as const, title: 'Magic Paste is off', lines: ['This was the browser’s own paste.'] }
+            : skippedFeedback(reason, context);
+      if (!feedback) return;
+      showToast(feedback);
+      note.textContent = `${feedback.title}. ${feedback.lines?.join(' ') ?? ''}`;
     },
   });
   $<HTMLInputElement>('live-enabled').addEventListener('change', (event) => {

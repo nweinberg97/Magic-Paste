@@ -13,6 +13,8 @@ const STATIC = [
   ['public', outdir],
   ['src/popup/popup.html', `${outdir}/popup.html`],
   ['src/playground/playground.html', `${outdir}/playground.html`],
+  ['src/testkit/testkit.html', `${outdir}/testkit.html`],
+  ['src/site/index.html', `${outdir}/index.html`],
 ];
 
 async function copyStatic() {
@@ -36,6 +38,9 @@ const options = {
     { in: 'src/popup/popup.css', out: 'popup' },
     { in: 'src/playground/playground.ts', out: 'playground' },
     { in: 'src/playground/playground.css', out: 'playground' },
+    { in: 'src/testkit/testkit.ts', out: 'testkit' },
+    { in: 'src/testkit/testkit.css', out: 'testkit' },
+    { in: 'src/site/site.css', out: 'site' },
   ],
   outdir,
   bundle: true,
@@ -56,7 +61,7 @@ if (watch || serve) {
   await context.watch();
   if (serve) {
     const { port } = await context.serve({ servedir: outdir, port: 5173 });
-    console.log(`\n  Playground: http://localhost:${port}/playground.html\n`);
+    console.log(`\n  Site:       http://localhost:${port}/\n  Playground: http://localhost:${port}/playground.html\n`);
   }
 } else {
   await esbuild.build(options);

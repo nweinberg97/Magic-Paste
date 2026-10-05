@@ -34,9 +34,10 @@ export function insertText(element: HTMLElement, text: string): Delivery | null 
  * Rich editors. First, hand the editor a synthetic paste event carrying the
  * cleaned HTML: framework editors (ProseMirror, Lexical, Slate, Quill 2,
  * Gmail's composer) run their own paste handling on it and keep their
- * internal state consistent. If no editor claims it, insert the HTML directly.
+ * internal state consistent. If no editor claims it, insert the HTML directly,
+ * unless the destination is editor-only (Google Docs), where we step aside.
  */
-export function insertRich(origin: EventTarget, element: HTMLElement, html: string, text: string): Delivery | null {
+export function insertRich(origin: EventTarget, element: HTMLElement, html: string, text: string, allowDirectInsert = true): Delivery | null {
   const data = new DataTransfer();
   data.setData('text/html', html);
   data.setData('text/plain', text);
@@ -44,6 +45,7 @@ export function insertRich(origin: EventTarget, element: HTMLElement, html: stri
   syntheticPastes.add(synthetic);
   origin.dispatchEvent(synthetic);
   if (synthetic.defaultPrevented) return 'editor';
+  if (!allowDirectInsert) return null;
 
   element.focus();
   if (document.execCommand('insertHTML', false, html)) return 'insert-html';
