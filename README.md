@@ -9,6 +9,8 @@ A Chrome extension that makes <kbd>⌘V</kbd> / <kbd>Ctrl+V</kbd> destination-aw
 
 <p align="center"><img src="docs/playground.png" alt="Playground: a ChatGPT answer pasted into Gmail, before and after Magic Paste" width="880" /></p>
 
+<p align="center">🚧 <b>Status: actively in development.</b> This is a working prototype with some bugs and unfinished features — not yet a polished, finished product.</p>
+
 ---
 
 ## The problem
